@@ -33,21 +33,23 @@ struct clock
 struct mesg_buffer
 {
 	long mesg_type;
-	unsigned long processNum;
-	int request[resSize];
-	int granted[resSize];
+	unsigned long processNum; // Process id Number
+	int request[resSize]; // Array for processes that made request
+	int granted[resSize]; // Array for processes that have been granted
 }message;
 
+// Process Scheduler/ Resource Handler
 void scheduler(char* outfile, int total, int verbFlag)
 {
 	unsigned int quantum = 500000;
 	int alive = 0, totalSpawn = 0, msgid, msgid1, msgid2, shmID, timeFlag = 0, i = 0, totalFlag = 0, pid[total], status, request[total][resSize], grantFlag = 0, deadlockFlag = 0, processStuck = 0, lastCheck = 0, fileFlag = 0;
-	int resource[resSize][2], resOut[total][resSize];
+	int resource[resSize][2], resOut[total][resSize]; // To be graphed
 	unsigned long increment, timeBetween, cycles = 0;
 	char * parameter[32], parameter1[32], parameter2[32], parameter3[32], parameter4[32], parameter5[32];
 	//Pointer for the shared memory timer
 	struct clock * shmPTR;
 	struct clock launchTime;
+	
 	//Time variables for the time out function
 	time_t when, when2;
 	//File pointers for input and output, respectively
@@ -57,6 +59,8 @@ void scheduler(char* outfile, int total, int verbFlag)
 	srand(time(0));
 	timeBetween = (rand() % 100000000) + 1000000;
 	key = rand();
+	
+	//Create Message Queues for sync.
 	msgKey = ftok("child.c", 65);
 	msgKey1 = ftok("child.c", 67);
 	msgKey2 = ftok("child.c", 69);
@@ -64,11 +68,13 @@ void scheduler(char* outfile, int total, int verbFlag)
 	msgid1 = msgget(msgKey1, 0777 | IPC_CREAT);
 	msgid2 = msgget(msgKey2, 0777 | IPC_CREAT);
 	message.mesg_type = 1;
+	
+
 	//Setting initial time for later check.
 	time(&when);
 	outPut = fopen(outfile, "w");
 	//Check for file error.
-	if (outPut == NULL)
+	if (outPut == NULL) // error check
 	{
 		perror("Error");
 		printf("Output file could not be created.\n");
@@ -84,11 +90,13 @@ void scheduler(char* outfile, int total, int verbFlag)
 			request[k][j] = 0;
 		}
 	}
-	//Get and access shared memory, setting initial timer state to 0.
+	
+	//Storing the clock in shared memory, setting initial timer state to 0.
 	shmID = shmget(key, sizeof(struct clock), IPC_CREAT | IPC_EXCL | 0777);
 	shmPTR = (struct clock *) shmat(shmID, (void *) 0, 0);
 	shmPTR[0].sec = 0;
 	shmPTR[0].nano = 0;
+	
 	//initializing resource arrays
 	for(k = 0; k < resSize; k++)
 	{
@@ -112,9 +120,12 @@ void scheduler(char* outfile, int total, int verbFlag)
 	{
 		pid[k] = -1;
 	}
+	
 	//Call to signal handler for ctrl-c
 	signal(SIGINT, intHandler);
+	
 	increment = (rand() % 5000000) + 25000000;
+	
 	//While loop keeps running until all children are spawned, ctrl-c, or time is reached.
 	while((i < total) && (keepRunning == 1) && (timeFlag == 0) && fileFlag == 0)
 	{
@@ -138,7 +149,7 @@ void scheduler(char* outfile, int total, int verbFlag)
 		{
 			lastCheck = shmPTR[0].sec;
 			printf("Checking for deadlock, %d alive.\n", alive);
-			deadlockFlag = deadlockDetector(total, resource, request, pid, outPut);
+			deadlockFlag = deadlockDetector(total, resource, request, pid, outPut); // Check for deadlock
 		}
 		//If statement to spawn child if timer has passed its birth time.
 		if((shmPTR[0].sec > launchTime.sec) || ((shmPTR[0].sec == launchTime.sec) && (shmPTR[0].nano > launchTime.nano)))
@@ -194,7 +205,7 @@ void scheduler(char* outfile, int total, int verbFlag)
 			for (s = 0; s < totalSpawn; s++)
 			{
 				for (j = 0; j < resSize; j++){
-					if ((request[s][j] > 0) && (request[s][j] < resource[j][0]))
+					if ((request[s][j] > 0) && (request[s][j] < resource[j][0])) // Fulfil request if "OS" has the resource
 					{
 						grantFlag = 1;
 						message.granted[j] = request[k][j];
@@ -202,7 +213,7 @@ void scheduler(char* outfile, int total, int verbFlag)
 						{
 							resource[j][0] = resource[j][0] - request[s][j];
 						}
-						resOut[k][j] = message.granted[j];
+						resOut[k][j] = message.granted[j]; // Store the fulfilled request
 					}
 				}
 				if(grantFlag)
@@ -219,11 +230,11 @@ void scheduler(char* outfile, int total, int verbFlag)
 			int m; // Loop variable
 			for(m = 0; m < resSize; m++)
 			{
-				message.granted[m] = 0;
+				message.granted[m] = 0; // Empty resourcees graneted array 
 			}
 			for(k = 0; k < resSize; k++)
 			{
-				if(resource[k][0] - message.request[k] >= 0)
+				if(resource[k][0] - message.request[k] >= 0) // Grant resource if can
 				{
 					grantFlag = 1;
 					if (resource[k][1] == 0)
@@ -236,7 +247,7 @@ void scheduler(char* outfile, int total, int verbFlag)
 				}
 				else
 				{
-					request[message.processNum-1][k] = message.request[k];
+					request[message.processNum-1][k] = message.request[k]; // Store and schedule unfulfilled request
 				}
 			}
 			if(grantFlag == 1)

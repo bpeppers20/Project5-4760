@@ -17,10 +17,10 @@ void help();
 
 int main(int argc, char * argv[])
 {      
-	int opt, x = 0, total = 18, hFlag = 0;
+	int opt, x = 0, total = 18, hFlag = 0, verbFlag = 0;
 	char * outfile = "output.txt";
 	//Assigning default case name.
-	if((opt = getopt(argc, argv, "-ho:n:")) != -1)
+	if((opt = getopt(argc, argv, "-ho:n:v")) != -1)
 	{
 		do{
 			x++;
@@ -37,14 +37,17 @@ int main(int argc, char * argv[])
 				if (total > 18)
 					total = 18;
 				break;
+			case 'v':
+				verbFlag = 1; // TO enable verbose option
+				break;
 			//Case handles last run through of getopt.
 			case 1:
 				break;
 			}
-		} while((opt = getopt(argc, argv, "-ho:n:")) != -1);
+		} while((opt = getopt(argc, argv, "-ho:n:v")) != -1);
 	}
 	if (hFlag == 0)
-		scheduler(outfile, total);
+		scheduler(outfile, total, verbFlag);
 	return 0; 
 }
 void help()

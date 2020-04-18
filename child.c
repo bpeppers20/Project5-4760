@@ -18,7 +18,7 @@ static volatile int keepRunning = 1;
 void intHandler(int dummy)
 {
 	printf("Process %d caught sigint.\n", getpid());
-    keepRunning = 0;
+    	keepRunning = 0;
 }
 
 struct clock
@@ -102,7 +102,7 @@ int main(int argc, char * argv[])
 		message.mesg_type = 1;
 		for(k = 0; k < resSize; k++)
 		{
-			//printf("Child %li requesting %d resources, holds %d.\n", logicalNum, message.request[k], resourcesHeld[k]);
+			//printf("Process %li requesting %d resources, holds %d.\n", logicalNum, message.request[k], resourcesHeld[k]);
 		}
 		msgsnd(msgid, &message, sizeof(message), 0);
 		msgrcv(msgid1, &message, sizeof(message), logicalNum, 0);
@@ -110,7 +110,7 @@ int main(int argc, char * argv[])
 		for(k = 0; k < resSize; k++)
 		{
 			resourcesHeld[k] = resourcesHeld[k] + message.granted[k];
-			//printf("Child %li granted %d resources, holds %d out of a possible %d.\n", logicalNum, message.granted[k], resourcesHeld[k], shmPTR[0].initialResource[k]);
+			printf("Process %li granted %d resources, holds %d out of a possible %d.\n", logicalNum, message.granted[k], resourcesHeld[k], shmPTR[0].initialResource[k]);
 		}
 		if (shmPTR[0].nano + checkSpanNano > 1000000000)
 		{
@@ -132,6 +132,6 @@ int main(int argc, char * argv[])
 	}
 	msgsnd(msgid2, &message, sizeof(message), 0);
 	shmdt(shmPTR);
-	printf("Child %li dying.\n", logicalNum);
+	printf("Process %li dying.\n", logicalNum);
 	return 0;
 }
