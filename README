@@ -7,3 +7,4 @@ The parent will also terminate the program and children if there is a ctrl-c sig
 It will also terminate if a deadlock is detected.  
 Every second of simulated time, the parent will call the deadlock detection algorithm, which will step through all the children and check to see if any of them can terminate, given the current system resources and their outstanding requests.  
 The parent then sends a SIGINT to the children, gives them a short time to exit gracefully and deallocate any shared memory/ message queues it may have used, and then, if they fail, sends them a SIGKILL before terminating shared memory and exiting itself.
+Github Repository: https://github.com/bpeppers20/project5-4760
