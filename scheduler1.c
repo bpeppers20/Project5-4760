@@ -15,7 +15,7 @@
 
 //Signal handler to catch ctrl-c
 static volatile int keepRunning = 1;
-static int deadlockDetector(int, int[resSize][2], int[][resSize], int[], FILE *);
+static int deadlockDetector(int, int[resSize][2], int[][resSize], int[], FILE *, int );
 
 void intHandler(int dummy) 
 {
@@ -45,11 +45,10 @@ void scheduler(char* outfile, int total, int verbFlag)
 	int alive = 0, totalSpawn = 0, msgid, msgid1, msgid2, shmID, timeFlag = 0, i = 0, totalFlag = 0, pid[total], status, request[total][resSize], grantFlag = 0, deadlockFlag = 0, processStuck = 0, lastCheck = 0, fileFlag = 0;
 	int resource[resSize][2], resOut[total][resSize]; // To be graphed
 	unsigned long increment, timeBetween, cycles = 0;
-	char * parameter[32], parameter1[32], parameter2[32], parameter3[32], parameter4[32], parameter5[32];
+	char * parameter[32], parameter1[32], parameter2[32], parameter3[32], parameter4[32], parameter5[32],parameter6[32];
 	//Pointer for the shared memory timer
 	struct clock * shmPTR;
-	struct clock launchTime;
-	
+	struct clock launchTime;	
 	//Time variables for the time out function
 	time_t when, when2;
 	//File pointers for input and output, respectively
@@ -149,7 +148,7 @@ void scheduler(char* outfile, int total, int verbFlag)
 		{
 			lastCheck = shmPTR[0].sec;
 			printf("Checking for deadlock, %d alive.\n", alive);
-			deadlockFlag = deadlockDetector(total, resource, request, pid, outPut); // Check for deadlock
+			deadlockFlag = deadlockDetector(total, resource, request, pid, outPut, verbFlag); // Check for deadlock
 		}
 		//If statement to spawn child if timer has passed its birth time.
 		if((shmPTR[0].sec > launchTime.sec) || ((shmPTR[0].sec == launchTime.sec) && (shmPTR[0].nano > launchTime.nano)))
@@ -162,8 +161,9 @@ void scheduler(char* outfile, int total, int verbFlag)
 				sprintf(parameter3, "%li", msgKey1);
 				sprintf(parameter4, "%li", msgKey2);
 				sprintf(parameter5, "%d", i+1);
+				sprintf(parameter6, "%d", verbFlag);
 				srand(getpid() * (time(0) / 3));
-				char * args[] = {parameter1, parameter2, parameter3, parameter4, parameter5, NULL};
+				char * args[] = {parameter1, parameter2, parameter3, parameter4, parameter5, parameter6, NULL};
 				execvp("./child\0", args);
 			}
 			//Updating launch time for next child.
@@ -188,7 +188,8 @@ void scheduler(char* outfile, int total, int verbFlag)
 			{
 				message.granted[m] = 0;
 			}
-			fprintf(outPut, "Parent received dead child message from %li, %d.\n", message.processNum, pid[message.processNum-1]);
+			if(verbFlag == 1)
+				fprintf(outPut, "Parent received dead child message from %li, %d.\n", message.processNum, pid[message.processNum-1]);
 			for(k = 0; k < resSize; k++)
 			{
 			//Adding child's resources back to pool if not shareable
@@ -196,7 +197,8 @@ void scheduler(char* outfile, int total, int verbFlag)
 				{
 					resource[k][0] = resource[k][0] - message.request[k];
 				}
-				//printf("Parent receiving %d resource %d from dying child %li. %d remain.\n", message.request[k], k, message.processNum, resource[k][0]);
+				if(verbFlag == 1)
+					printf("Parent receiving %d resource %d from dying child %li. %d remain.\n", message.request[k], k, message.processNum, resource[k][0]);
 				request[message.processNum-1][k] = 0;
 			}
 			alive--;
@@ -220,7 +222,8 @@ void scheduler(char* outfile, int total, int verbFlag)
 				{
 					grantFlag = 0;
 					message.mesg_type = k+1;
-					fprintf(outPut, "Parent granting child %li resources from dead child.\n", message.mesg_type);
+					if(verbFlag == 1)
+						fprintf(outPut, "Parent granting child %li resources from dead child.\n", message.mesg_type);
 					msgsnd(msgid1, &message, sizeof(message), 0);
 				}
 			}
@@ -252,7 +255,8 @@ void scheduler(char* outfile, int total, int verbFlag)
 			}
 			if(grantFlag == 1)
 			{
-				fprintf(outPut, "Parent granting child %li resources.\n", message.mesg_type);
+				if(verbFlag == 1)
+					fprintf(outPut, "Parent granting child %li resources.\n", message.mesg_type);
 				msgsnd(msgid1, &message, sizeof(message), 0);
 				grantFlag = 0;
 			}
@@ -279,7 +283,7 @@ void scheduler(char* outfile, int total, int verbFlag)
 		{
 			lastCheck = shmPTR[0].sec;
 			printf("Checking for deadlock, %d alive.\n", alive);
-			deadlockFlag = deadlockDetector(total, resource, request, pid, outPut);
+			deadlockFlag = deadlockDetector(total, resource, request, pid, outPut, verbFlag);
 		}
 		if (msgrcv(msgid2, &message, sizeof(message), 0, IPC_NOWAIT) !=-1)
 		{
@@ -288,14 +292,16 @@ void scheduler(char* outfile, int total, int verbFlag)
 			{
 				message.granted[m] = 0;
 			}
-			fprintf(outPut, "Parent received dead child message from %li, %d.\n", message.processNum, pid[message.processNum-1]);
+			if(verbFlag == 1)
+				fprintf(outPut, "Parent received dead child message from %li, %d.\n", message.processNum, pid[message.processNum-1]);
 			for(k = 0; k < resSize; k++)
 			{
 				if (resource[k][1] == 0)
 				{
 					resource[k][0] = resource[k][0] - message.request[k];
 				}
-				//printf("Parent receiving %d %d resource from dying child %li. %d remain.\n", message.request[k], k, message.processNum, resource[k][0]);
+				if(verbFlag == 1)
+					printf("Parent receiving %d %d resource from dying child %li. %d remain.\n", message.request[k], k, message.processNum, resource[k][0]);
 				request[message.processNum-1][k] = 0;
 			}
 			alive--;
@@ -319,7 +325,8 @@ void scheduler(char* outfile, int total, int verbFlag)
 				if(grantFlag)
 				{
 					grantFlag = 0;
-					fprintf(outPut, "Parent granting child %li resources from dead child.\n", message.mesg_type);
+					if(verbFlag == 1)
+						fprintf(outPut, "Parent granting child %li resources from dead child.\n", message.mesg_type);
 					msgsnd(msgid1, &message, sizeof(message), 0);
 				}
 			}
@@ -351,7 +358,8 @@ void scheduler(char* outfile, int total, int verbFlag)
 			}
 			if (grantFlag == 1)
 			{
-				fprintf(outPut, "Parent granting child %li resources.\n", message.mesg_type);
+				if(verbFlag == 1)
+					fprintf(outPut, "Parent granting child %li resources.\n", message.mesg_type);
 				msgsnd(msgid1, &message, sizeof(message), 0);
 				grantFlag = 0;
 			}
@@ -380,7 +388,8 @@ void scheduler(char* outfile, int total, int verbFlag)
 	{
 		if (pid[i] > -1)
 		{
-			fprintf(outPut, "Killing process %d, %d\n", i+1, pid[i]);
+			if(verbFlag == 1)
+				fprintf(outPut, "Killing process %d, %d\n", i+1, pid[i]);
 			if (kill(pid[i], SIGINT) == 0)
 			{
 				usleep(100000);
@@ -397,7 +406,7 @@ void scheduler(char* outfile, int total, int verbFlag)
 	fclose(outPut);
 }
 
-static int deadlockDetector(int total, int resources[resSize][2], int requests[total][resSize], int pid[total], FILE * outPut) // To detect and resolve deadlock
+static int deadlockDetector(int total, int resources[resSize][2], int requests[total][resSize], int pid[total], FILE * outPut, int verbFlag) // To detect and resolve deadlock
 {
 	int procReq[resSize], deadlocked[total];
 	int sysLock = 0, status = 1, processStuck = 0;
@@ -406,12 +415,14 @@ static int deadlockDetector(int total, int resources[resSize][2], int requests[t
 	{
 		if (pid[i] > 0)
 		{
-			fprintf(outPut, "Process %d, %d unfulfilled requests, available resources: ", i+1, pid[i]);
+			if (verbFlag == 1)
+				fprintf(outPut, "Process %d, %d unfulfilled requests, available resources: ", i+1, pid[i]);
 			
 			for (j = 0; j < resSize; j++)
 			{
 				procReq[j] = requests[i][j];
-				fprintf(outPut, "%d, %d ||", procReq[j], resources[j][0]);
+				if (verbFlag == 1)
+					fprintf(outPut, "%d, %d ||", procReq[j], resources[j][0]);
 			}
 			fprintf(outPut, "\n");
 		}

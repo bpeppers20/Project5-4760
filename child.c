@@ -64,6 +64,7 @@ int main(int argc, char * argv[])
 	checkSpanNano = rand() % 250000;
 	terminates = rand() % 100;
 	message.mesg_type = 1;
+	int verbFlag = atoi(argv[5]);
 	while (terminates > 20 && keepRunning == 1)
 	{
 		int m; // Loop variable
@@ -110,7 +111,8 @@ int main(int argc, char * argv[])
 		for(k = 0; k < resSize; k++)
 		{
 			resourcesHeld[k] = resourcesHeld[k] + message.granted[k];
-			printf("Process %li granted %d resources, holds %d out of a possible %d.\n", logicalNum, message.granted[k], resourcesHeld[k], shmPTR[0].initialResource[k]);
+			if(verbFlag == 1)
+				printf("Process %li granted %d resources, holds %d out of a possible %d.\n", logicalNum, message.granted[k], resourcesHeld[k], shmPTR[0].initialResource[k]);
 		}
 		if (shmPTR[0].nano + checkSpanNano > 1000000000)
 		{
@@ -132,6 +134,7 @@ int main(int argc, char * argv[])
 	}
 	msgsnd(msgid2, &message, sizeof(message), 0);
 	shmdt(shmPTR);
-	printf("Process %li dying.\n", logicalNum);
+	if (verbFlag == 1)
+		printf("Process %li dying.\n", logicalNum);
 	return 0;
 }

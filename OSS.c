@@ -38,7 +38,7 @@ int main(int argc, char * argv[])
 					total = 18;
 				break;
 			case 'v':
-				verbFlag = 1; // TO enable verbose option
+				verbFlag = 1; // To enable verbose option
 				break;
 			//Case handles last run through of getopt.
 			case 1:
@@ -57,5 +57,6 @@ void help()
 	printf("-h: Prints this help message.\n");
 	printf("-n: Number of children to be created.  The maximum is 18.\n");
 	printf("-o: Name of the output file.The default is output.txt.\n");
+	printf("-v: For verbose information for output file. (Resource request, graphs, etc).\n");
 }
 
